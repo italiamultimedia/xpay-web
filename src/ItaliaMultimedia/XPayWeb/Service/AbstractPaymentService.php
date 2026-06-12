@@ -26,10 +26,11 @@ abstract class AbstractPaymentService
     /**
      * @return array<string,string>
      */
-    protected function getRequestHeaders(): array
+    protected function getRequestHeaders(string $correlationId): array
     {
         return [
             'Content-Type' => 'application/json',
+            'Correlation-Id' => $correlationId,
             'X-API-KEY' => $this->paymentSystemSettings->apiKey,
         ];
     }

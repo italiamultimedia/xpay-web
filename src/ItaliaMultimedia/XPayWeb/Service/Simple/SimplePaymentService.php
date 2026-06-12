@@ -68,7 +68,11 @@ final class SimplePaymentService extends AbstractSimplePaymentService
 
         $request = $request->withBody($this->streamFactory->createStream($requestBody));
 
-        foreach ($this->getRequestHeaders() as $headerName => $headerValue) {
+        $correlationId = $createHostedPaymentPageRequest->correlationId;
+
+        foreach (
+            $this->getRequestHeaders($correlationId) as $headerName => $headerValue
+        ) {
             $request = $request->withHeader($headerName, $headerValue);
         }
 
