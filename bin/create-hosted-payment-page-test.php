@@ -10,12 +10,14 @@ use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
 use ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use WebServCo\Data\Factory\Extraction\DataExtractionContainerFactory;
 
 $paymentSystemSettings = new PaymentSystemSettings(
     '2e570a58-9914-477a-9ede-35baff23a376',
     Configuration::ENVIRONMENT_TEST,
 );
 
+$dataExtractionContainer = (new DataExtractionContainerFactory())->createDataExtractionContainer(true);
 $psr17Factory = new Psr17Factory();
 
 $service = new SimplePaymentService(
@@ -23,11 +25,14 @@ $service = new SimplePaymentService(
     $psr17Factory,
     $psr17Factory,
     $paymentSystemSettings,
+    $dataExtractionContainer,
 );
+
+$orderId = sprintf('TEST%d', time());
 
 $request = new CreateHostedPaymentPageRequest(
     '2f0ea505-9b41-414a-b374-4fe672327d85',
-    sprintf('TEST%d', time()),
+    $orderId,
     100,
     Configuration::CURRENCY,
     'ENG',
@@ -40,8 +45,10 @@ $request = new CreateHostedPaymentPageRequest(
 try {
     $response = $service->createHostedPaymentPage($request);
 
+    echo 'Order ID: ' . $orderId . PHP_EOL;
     echo 'Hosted page: ' . $response->hostedPage . PHP_EOL;
     echo 'Security token: ' . $response->securityToken . PHP_EOL;
+    echo 'Status command: php bin/retrieve-order-status-test.php ' . $orderId . PHP_EOL;
 } catch (Throwable $throwable) {
     $rawResponse = $service->getResponse();
 

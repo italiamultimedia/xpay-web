@@ -7,18 +7,17 @@ namespace ItaliaMultimedia\XPayWeb\Service\Simple;
 use Fig\Http\Message\RequestMethodInterface;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Response\CreateHostedPaymentPageResponse;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Response\RetrieveOrderStatusResponse;
 use Override;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
-use UnexpectedValueException;
+use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;
 
-use function is_array;
-use function is_string;
-use function json_decode;
 use function json_encode;
 use function strlen;
 
@@ -33,23 +32,24 @@ final class SimplePaymentService extends AbstractSimplePaymentService
         private RequestFactoryInterface $requestFactory,
         private StreamFactoryInterface $streamFactory,
         PaymentSystemSettings $paymentSystemSettings,
+        DataExtractionContainerInterface $dataExtractionContainer,
     ) {
-        parent::__construct($paymentSystemSettings);
+        parent::__construct($paymentSystemSettings, $dataExtractionContainer);
     }
 
     #[Override]
     public function createHostedPaymentPage(
         CreateHostedPaymentPageRequest $createHostedPaymentPageRequest,
     ): CreateHostedPaymentPageResponse {
-        $request = $this->createRequest($createHostedPaymentPageRequest);
+        $request = $this->createHostedPaymentPageRequest($createHostedPaymentPageRequest);
 
         $this->response = $this->httpClient->sendRequest($request);
 
-        $this->validateResponseStatusCode($this->response);
+        $this->validateResponseStatusCode($this->response, 200);
 
         $responseBodyAsArray = $this->getResponseBodyAsArray($this->response);
 
-        return $this->createResponse($responseBodyAsArray);
+        return $this->createHostedPaymentPageResponse($responseBodyAsArray);
     }
 
     public function getResponse(): ?ResponseInterface
@@ -57,8 +57,24 @@ final class SimplePaymentService extends AbstractSimplePaymentService
         return $this->response;
     }
 
-    private function createRequest(CreateHostedPaymentPageRequest $createHostedPaymentPageRequest): RequestInterface
-    {
+    #[Override]
+    public function retrieveOrderStatus(
+        RetrieveOrderStatusRequest $retrieveOrderStatusRequest,
+    ): RetrieveOrderStatusResponse {
+        $request = $this->createRetrieveOrderStatusRequest($retrieveOrderStatusRequest);
+
+        $this->response = $this->httpClient->sendRequest($request);
+
+        $this->validateResponseStatusCode($this->response, 200);
+
+        $responseBodyAsArray = $this->getResponseBodyAsArray($this->response);
+
+        return $this->createRetrieveOrderStatusResponse($responseBodyAsArray);
+    }
+
+    private function createHostedPaymentPageRequest(
+        CreateHostedPaymentPageRequest $createHostedPaymentPageRequest,
+    ): RequestInterface {
         $requestBody = json_encode($createHostedPaymentPageRequest->toArray(), JSON_THROW_ON_ERROR);
 
         $request = $this->requestFactory->createRequest(
@@ -82,51 +98,22 @@ final class SimplePaymentService extends AbstractSimplePaymentService
             ->withHeader('Accept-Encoding', '');
     }
 
-    /**
-     * @phpcs:ignore SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint
-     * @return array<mixed>
-     */
-    private function getResponseBodyAsArray(ResponseInterface $response): array
-    {
-        $body = (string) $response->getBody();
-        if ($body === '') {
-            throw new UnexpectedValueException('Response body is empty.');
+    private function createRetrieveOrderStatusRequest(
+        RetrieveOrderStatusRequest $retrieveOrderStatusRequest,
+    ): RequestInterface {
+        $request = $this->requestFactory->createRequest(
+            RequestMethodInterface::METHOD_GET,
+            $this->getOrderApiUrl($retrieveOrderStatusRequest->orderId),
+        );
+
+        foreach (
+            $this->getRequestHeaders($retrieveOrderStatusRequest->correlationId) as $headerName => $headerValue
+        ) {
+            $request = $request->withHeader($headerName, $headerValue);
         }
 
-        $array = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-        if (!is_array($array)) {
-            throw new UnexpectedValueException('Error decoding JSON data.');
-        }
-
-        return $array;
-    }
-
-    /**
-     * @phpcs:ignore SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint
-     * @param array<mixed> $responseBodyAsArray
-     */
-    private function createResponse(array $responseBodyAsArray): CreateHostedPaymentPageResponse
-    {
-        $hostedPage = $responseBodyAsArray['hostedPage'] ?? null;
-        $securityToken = $responseBodyAsArray['securityToken'] ?? null;
-
-        if (!is_string($hostedPage) || $hostedPage === '') {
-            throw new UnexpectedValueException('Invalid hosted page response.');
-        }
-
-        if (!is_string($securityToken) || $securityToken === '') {
-            throw new UnexpectedValueException('Invalid security token response.');
-        }
-
-        return new CreateHostedPaymentPageResponse($hostedPage, $securityToken);
-    }
-
-    private function validateResponseStatusCode(ResponseInterface $response): bool
-    {
-        if ($response->getStatusCode() !== 200) {
-            throw new UnexpectedValueException('Response does not contain 200 status code.');
-        }
-
-        return true;
+        return $request
+            ->withHeader('Accept', 'application/json')
+            ->withHeader('Accept-Encoding', '');
     }
 }

@@ -26,29 +26,33 @@ final class CreateHostedPaymentPageRequest implements DataTransferInterface
      */
     public function toArray(): array
     {
-        $data = [
-            'order' => [
-                'amount' => (string) $this->amount,
-                'currency' => $this->currency,
-                'orderId' => $this->orderId,
-            ],
-            'paymentSession' => [
-                'actionType' => 'PAY',
-                'amount' => (string) $this->amount,
-                'cancelUrl' => $this->cancelUrl,
-                'language' => $this->language,
-                'resultUrl' => $this->resultUrl,
-            ],
+        $order = [
+            'amount' => (string) $this->amount,
+            'currency' => $this->currency,
+        ];
+
+        if ($this->description !== null) {
+            $order['description'] = $this->description;
+        }
+
+        $order['orderId'] = $this->orderId;
+
+        $paymentSession = [
+            'actionType' => 'PAY',
+            'amount' => (string) $this->amount,
+            'cancelUrl' => $this->cancelUrl,
+            'language' => $this->language,
         ];
 
         if ($this->notificationUrl !== null) {
-            $data['paymentSession']['notificationUrl'] = $this->notificationUrl;
+            $paymentSession['notificationUrl'] = $this->notificationUrl;
         }
 
-        if ($this->description !== null) {
-            $data['order']['description'] = $this->description;
-        }
+        $paymentSession['resultUrl'] = $this->resultUrl;
 
-        return $data;
+        return [
+            'order' => $order,
+            'paymentSession' => $paymentSession,
+        ];
     }
 }

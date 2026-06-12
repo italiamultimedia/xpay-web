@@ -17,4 +17,6 @@ final class Configuration
     public const string ENVIRONMENT_TEST = 'test';
 
     public const string HOSTED_PAYMENT_PAGE_API_ENDPOINT = 'orders/hpp';
+
+    public const string ORDER_API_ENDPOINT = 'orders/%s';
 }

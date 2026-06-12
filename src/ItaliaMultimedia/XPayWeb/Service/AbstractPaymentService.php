@@ -6,12 +6,22 @@ namespace ItaliaMultimedia\XPayWeb\Service;
 
 use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
+use ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory;
+use Psr\Http\Message\ResponseInterface;
 use UnexpectedValueException;
+use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;
+
+use function is_array;
+use function json_decode;
+
+use const JSON_THROW_ON_ERROR;
 
 abstract class AbstractPaymentService
 {
-    public function __construct(protected PaymentSystemSettings $paymentSystemSettings)
-    {
+    public function __construct(
+        protected PaymentSystemSettings $paymentSystemSettings,
+        protected DataExtractionContainerInterface $dataExtractionContainer,
+    ) {
     }
 
     protected function getApiBaseUrl(): string
@@ -33,5 +43,33 @@ abstract class AbstractPaymentService
             'Correlation-Id' => $correlationId,
             'X-API-KEY' => $this->paymentSystemSettings->apiKey,
         ];
+    }
+
+    /**
+     * @phpcs:ignore SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint
+     * @return array<mixed>
+     */
+    protected function getResponseBodyAsArray(ResponseInterface $response): array
+    {
+        $body = (string) $response->getBody();
+        if ($body === '') {
+            throw new UnexpectedValueException('Response body is empty.');
+        }
+
+        $array = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($array)) {
+            throw new UnexpectedValueException('Error decoding JSON data.');
+        }
+
+        return $array;
+    }
+
+    protected function validateResponseStatusCode(ResponseInterface $response, int $expectedStatusCode): bool
+    {
+        if ($response->getStatusCode() !== $expectedStatusCode) {
+            throw (new NexiApiExceptionFactory($this->dataExtractionContainer))->create($response);
+        }
+
+        return true;
     }
 }
