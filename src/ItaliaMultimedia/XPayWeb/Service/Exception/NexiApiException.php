@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ItaliaMultimedia\XPayWeb\Exception;
+namespace ItaliaMultimedia\XPayWeb\Service\Exception;
 
 use ItaliaMultimedia\XPayWeb\DataTransfer\NexiError;
 use RuntimeException;

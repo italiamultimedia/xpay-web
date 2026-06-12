@@ -10,7 +10,7 @@ use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest;
-use ItaliaMultimedia\XPayWeb\Exception\NexiApiException;
+use ItaliaMultimedia\XPayWeb\Service\Exception\NexiApiException;
 use ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;

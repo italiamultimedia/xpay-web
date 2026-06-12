@@ -24,10 +24,9 @@ final class HostedPaymentResultService implements HostedPaymentResultServiceInte
     }
 
     /**
-     * The XPay Web docs instruct merchants to include the orderId in resultUrl and then call GET /orders/{orderId};
-     * they do not document a gateway-owned redirect query/body payload to validate here.
-     *
-     * @todo Verify whether Nexi appends any query string to resultUrl in every Hosted Payment Page flow.
+     * The resultUrl is created by the merchant and should already be tied to the local orderId.
+     * Nexi may append paymentId/paymentid as redirect metadata, but payment verification
+     * must be performed through GET /orders/{orderId}.
      */
     #[Override]
     public function createHostedPaymentResult(string $orderId): HostedPaymentResult

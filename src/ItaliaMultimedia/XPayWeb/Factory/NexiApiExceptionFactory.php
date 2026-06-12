@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace ItaliaMultimedia\XPayWeb\Factory;
 
 use ItaliaMultimedia\XPayWeb\DataTransfer\NexiError;
-use ItaliaMultimedia\XPayWeb\Exception\NexiApiException;
+use ItaliaMultimedia\XPayWeb\Service\Exception\NexiApiException;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
 use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;

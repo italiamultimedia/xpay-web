@@ -67,7 +67,9 @@ abstract class AbstractPaymentService
     protected function validateResponseStatusCode(ResponseInterface $response, int $expectedStatusCode): bool
     {
         if ($response->getStatusCode() !== $expectedStatusCode) {
-            throw (new NexiApiExceptionFactory($this->dataExtractionContainer))->create($response);
+            $nexiApiExceptionFactory = new NexiApiExceptionFactory($this->dataExtractionContainer);
+
+            throw $nexiApiExceptionFactory->create($response);
         }
 
         return true;
