@@ -10,12 +10,6 @@ use UnexpectedValueException;
 
 abstract class AbstractPaymentService
 {
-    abstract protected function createCancelUrl(string $orderId): string;
-
-    abstract protected function createNotificationUrl(string $orderId): string;
-
-    abstract protected function createReturnUrl(string $orderId): string;
-
     public function __construct(protected PaymentSystemSettings $paymentSystemSettings)
     {
     }
