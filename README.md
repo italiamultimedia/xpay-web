@@ -1,5 +1,5 @@
-# webservco/component-skeleton
+# italiamultimedia/xpay-web
 
-Project skeleton / project starter.
+An XPay Web (Nexi) implementation.
 
 ---

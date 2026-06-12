@@ -8,7 +8,7 @@
     "autoload" : {
         "psr-4" : {
             "Tests\\Unit\\" : "tests/Unit/",
-            "WebServCo\\" : "src/WebServCo/"
+            "ItaliaMultimedia\\" : "src/ItaliaMultimedia/"
         }
     },
     "config": {
@@ -17,15 +17,21 @@
         }
     },
     "description" : "A PHP component/library.",
-    "homepage" : "https://webserv.co",
+    "homepage" : "https://github.com/italiamultimedia/xpay-web",
     "keywords" : [
-        "component",
-        "webservco"
+        "nexi",
+        "italiamultimedia",
+        "xpay-web"
     ],
     "license" : "MIT",
-    "name" : "webservco/component-skeleton",
+    "name" : "italiamultimedia/xpay-web",
     "require": {
-        "php" : "^8.4"
+        "php" : "^8.4",
+        "fig/http-message-util": "^1",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1",
+        "psr/log": "^3",
+        "webservco/data": "^1"
     },
     "require-dev": {
         "pds/skeleton": "^1",
