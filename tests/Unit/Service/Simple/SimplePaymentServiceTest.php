@@ -156,8 +156,6 @@ final class SimplePaymentServiceTest extends TestCase
             'ENG',
             'https://example.com/payment/result',
             'https://example.com/payment/cancel',
-            'https://example.com/payment/notification',
-            'Test order',
         );
     }
 

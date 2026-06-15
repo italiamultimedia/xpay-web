@@ -64,4 +64,37 @@ final class PaymentServiceFactoryTest extends TestCase
             $service->getHostedPaymentPageApiUrl(),
         );
     }
+
+    /**
+     * @covers \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory::createRecurringPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Recurring\AbstractRecurringPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Recurring\RecurringPaymentService
+     */
+    public function testCreateRecurringPaymentService(): void
+    {
+        $psr17Factory = new Psr17Factory();
+        $dependencyContainer = new DependencyContainer(
+            new PaymentSystemSettings('api-key', Configuration::ENVIRONMENT_TEST),
+        );
+
+        $paymentServiceFactory = new PaymentServiceFactory($dependencyContainer);
+
+        $service = $paymentServiceFactory->createRecurringPaymentService(
+            new QueueHttpClient(),
+            $psr17Factory,
+            $psr17Factory,
+        );
+
+        self::assertSame(
+            'https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/orders/mit',
+            $service->getRecurringPaymentApiUrl(),
+        );
+    }
 }

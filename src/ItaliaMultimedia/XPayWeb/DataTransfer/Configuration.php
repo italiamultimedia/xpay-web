@@ -19,4 +19,6 @@ final class Configuration
     public const string HOSTED_PAYMENT_PAGE_API_ENDPOINT = 'orders/hpp';
 
     public const string ORDER_API_ENDPOINT = 'orders/%s';
+
+    public const string RECURRING_PAYMENT_API_ENDPOINT = 'orders/mit';
 }

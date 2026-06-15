@@ -7,6 +7,7 @@ namespace ItaliaMultimedia\XPayWeb\Factory\Service;
 use ItaliaMultimedia\XPayWeb\Container\DependencyContainer;
 use ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer;
 use ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService;
+use ItaliaMultimedia\XPayWeb\Service\Recurring\RecurringPaymentService;
 use ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -32,6 +33,20 @@ final class PaymentServiceFactory
         StreamFactoryInterface $streamFactory,
     ): SimplePaymentService {
         return new SimplePaymentService(
+            new HttpDependencyContainer($httpClient, $requestFactory, $streamFactory),
+            $this->dependencyContainer->getPaymentSystemSettings(),
+            $this->dependencyContainer->getNexiApiExceptionFactory(),
+            $this->dependencyContainer->getDataExtractionContainer(),
+            $this->dependencyContainer->getPaymentOperationFactory(),
+        );
+    }
+
+    public function createRecurringPaymentService(
+        ClientInterface $httpClient,
+        RequestFactoryInterface $requestFactory,
+        StreamFactoryInterface $streamFactory,
+    ): RecurringPaymentService {
+        return new RecurringPaymentService(
             new HttpDependencyContainer($httpClient, $requestFactory, $streamFactory),
             $this->dependencyContainer->getPaymentSystemSettings(),
             $this->dependencyContainer->getNexiApiExceptionFactory(),

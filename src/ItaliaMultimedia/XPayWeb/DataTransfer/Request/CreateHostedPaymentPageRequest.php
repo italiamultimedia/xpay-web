@@ -16,27 +16,49 @@ final class CreateHostedPaymentPageRequest implements DataTransferInterface
         public readonly string $language,
         public readonly string $resultUrl,
         public readonly string $cancelUrl,
-        public readonly ?string $notificationUrl = null,
-        public readonly ?string $description = null,
+        public readonly ?CreateHostedPaymentPageOptions $options = null,
     ) {
     }
 
     /**
-     * @return array<string,array<string,string>>
+     * @phpcs:disable SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint
+     * @return array<mixed>
+     * @phpcs:enable
      */
     public function toArray(): array
+    {
+        $options = $this->options;
+
+        return [
+            'order' => $this->createOrder($options),
+            'paymentSession' => $this->createPaymentSession($options),
+        ];
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private function createOrder(?CreateHostedPaymentPageOptions $options): array
     {
         $order = [
             'amount' => (string) $this->amount,
             'currency' => $this->currency,
         ];
 
-        if ($this->description !== null) {
-            $order['description'] = $this->description;
+        if ($options !== null && $options->description !== null) {
+            $order['description'] = $options->description;
         }
 
         $order['orderId'] = $this->orderId;
 
+        return $order;
+    }
+
+    /**
+     * @return array<string,array<string,string>|string>
+     */
+    private function createPaymentSession(?CreateHostedPaymentPageOptions $options): array
+    {
         $paymentSession = [
             'actionType' => 'PAY',
             'amount' => (string) $this->amount,
@@ -44,15 +66,23 @@ final class CreateHostedPaymentPageRequest implements DataTransferInterface
             'language' => $this->language,
         ];
 
-        if ($this->notificationUrl !== null) {
-            $paymentSession['notificationUrl'] = $this->notificationUrl;
+        if ($options === null) {
+            $paymentSession['resultUrl'] = $this->resultUrl;
+
+            return $paymentSession;
+        }
+
+        $recurrence = $options->recurrence;
+        if ($recurrence instanceof HostedPaymentPageRecurrence) {
+            $paymentSession['recurrence'] = $recurrence->toArray();
+        }
+
+        if ($options->notificationUrl !== null) {
+            $paymentSession['notificationUrl'] = $options->notificationUrl;
         }
 
         $paymentSession['resultUrl'] = $this->resultUrl;
 
-        return [
-            'order' => $order,
-            'paymentSession' => $paymentSession,
-        ];
+        return $paymentSession;
     }
 }

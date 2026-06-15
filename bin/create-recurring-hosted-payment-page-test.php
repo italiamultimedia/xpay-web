@@ -10,6 +10,7 @@ use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageOptions;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\HostedPaymentPageRecurrence;
 use ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory;
 use Nyholm\Psr7\Factory\Psr17Factory;
 
@@ -29,6 +30,7 @@ $service = $paymentServiceFactory->createSimplePaymentService(
 );
 
 $orderId = sprintf('TEST%d', time());
+$contractId = sprintf('CONTRACT%d', time());
 
 $request = new CreateHostedPaymentPageRequest(
     '2f0ea505-9b41-414a-b374-4fe672327d85',
@@ -38,13 +40,20 @@ $request = new CreateHostedPaymentPageRequest(
     'ENG',
     'https://example.com/payment/result',
     'https://example.com/payment/cancel',
-    new CreateHostedPaymentPageOptions(description: 'XPay Web Sandbox Test'),
+    new CreateHostedPaymentPageOptions(
+        description: 'XPay Web Sandbox Recurring Test',
+        recurrence: new HostedPaymentPageRecurrence(
+            $contractId,
+            HostedPaymentPageRecurrence::CONTRACT_TYPE_MIT_UNSCHEDULED,
+        ),
+    ),
 );
 
 try {
     $response = $service->createHostedPaymentPage($request);
 
     echo 'Order ID: ' . $orderId . PHP_EOL;
+    echo 'Contract ID: ' . $contractId . PHP_EOL;
     echo 'Hosted page: ' . $response->hostedPage . PHP_EOL;
     echo 'Security token: ' . $response->securityToken . PHP_EOL;
     echo 'Status command: php bin/retrieve-order-status-test.php ' . $orderId . PHP_EOL;

@@ -7,6 +7,8 @@ This package targets the API-key based XPay Web endpoints, not the legacy Alias 
 Implemented functionality:
 
 * Hosted Payment Page creation: `POST /orders/hpp`
+* Recurring contract creation through Hosted Payment Page recurrence data
+* Subsequent recurring payments: `POST /orders/mit`
 * Order status retrieval: `GET /orders/{orderId}`
 * Hosted payment result handling
 * Hosted payment notification parsing
@@ -19,7 +21,7 @@ Implemented functionality:
 composer require italiamultimedia/xpay-web
 ```
 
-The simple payment service needs:
+The HTTP payment services need:
 
 * a PSR-18 HTTP client
 * PSR-17 request and stream factories
@@ -96,6 +98,12 @@ $simplePaymentService = $paymentServiceFactory->createSimplePaymentService(
     $psr17Factory,
 );
 
+$recurringPaymentService = $paymentServiceFactory->createRecurringPaymentService(
+    new Client(),
+    $psr17Factory,
+    $psr17Factory,
+);
+
 $hostedPaymentResultService = $paymentServiceFactory->createHostedPaymentResultService();
 ```
 
@@ -105,6 +113,7 @@ Create an order in your application first, then send Nexi the hosted payment pag
 
 ```php
 use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageOptions;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
 
 $request = new CreateHostedPaymentPageRequest(
@@ -115,8 +124,7 @@ $request = new CreateHostedPaymentPageRequest(
     'ITA',
     'https://example.com/payment/result',
     'https://example.com/payment/cancel',
-    null,
-    'Order description',
+    new CreateHostedPaymentPageOptions(description: 'Order description'),
 );
 
 $response = $simplePaymentService->createHostedPaymentPage($request);
@@ -136,6 +144,7 @@ Notes:
 * `resultUrl` is where Nexi redirects the customer after payment.
 * `cancelUrl` is where Nexi redirects the customer after cancellation.
 * `notificationUrl` is optional. Pass `null` unless you have a real public HTTPS webhook listener.
+* `recurrence` is optional. Pass it only when this hosted payment should create a recurring payment contract.
 
 If you do have a webhook listener:
 
@@ -148,8 +157,10 @@ $request = new CreateHostedPaymentPageRequest(
     'ITA',
     'https://example.com/payment/result',
     'https://example.com/payment/cancel',
-    'https://example.com/payment/notification',
-    'Order description',
+    new CreateHostedPaymentPageOptions(
+        notificationUrl: 'https://example.com/payment/notification',
+        description: 'Order description',
+    ),
 );
 ```
 
@@ -208,21 +219,115 @@ try {
 
 Supported customer message language codes are `en` and `it`. Unknown languages fall back to English.
 
-## Recurring Payments
+## Recurring Hosted Payments
 
-Recurring payments are not implemented yet.
+Nexi recurring payments are MIT payments: Merchant Initiated Transactions. The first customer-present
+payment creates a contract, then later charges can be made against that contract.
 
-Expected next work:
+This package supports both phases:
 
-* Add request and response data transfers for recurring initial and subsequent payments.
-* Add service methods and factories for the Nexi recurring-payment endpoints.
-* Define how the merchant application stores recurring payment identifiers/tokens.
-* Add sandbox scripts and unit tests for initial authorization and subsequent charges.
+* first payment through Hosted Payment Page with a `recurrence` object inside `CreateHostedPaymentPageRequest`
+* later merchant-initiated charges through `POST /orders/mit`
+
+For the first payment, Nexi still receives the same `POST /orders/hpp` request; the recurrence data tells
+Nexi to create a contract from the card used on the hosted page.
+
+Use `MIT_SCHEDULED` when the later merchant charges have a defined schedule, for example every 30 days
+or on the first day of each month. Nexi also accepts `contractExpiryDate` and `contractFrequency` for
+scheduled contracts.
+
+Use `MIT_UNSCHEDULED` when the later merchant charges do not have a fixed schedule, for example usage-based
+or variable-date billing.
+
+Scheduled example:
+
+```php
+use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageOptions;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\HostedPaymentPageRecurrence;
+
+$contractId = 'CUSTOMER123PLAN1';
+
+$request = new CreateHostedPaymentPageRequest(
+    $correlationId,
+    $orderId,
+    1000,
+    Configuration::CURRENCY,
+    'ITA',
+    'https://example.com/payment/result',
+    'https://example.com/payment/cancel',
+    new CreateHostedPaymentPageOptions(
+        notificationUrl: 'https://example.com/payment/notification',
+        description: 'Subscription first payment',
+        recurrence: HostedPaymentPageRecurrence::createMitScheduled($contractId, '2027-12-31', '30'),
+    ),
+);
+```
+
+Unscheduled example:
+
+```php
+$request = new CreateHostedPaymentPageRequest(
+    $correlationId,
+    $orderId,
+    1000,
+    Configuration::CURRENCY,
+    'ITA',
+    'https://example.com/payment/result',
+    'https://example.com/payment/cancel',
+    new CreateHostedPaymentPageOptions(
+        description: 'Usage based first payment',
+        recurrence: HostedPaymentPageRecurrence::createMitUnscheduled($contractId),
+    ),
+);
+```
+
+Store the `contractId` in your application together with the customer/subscription. Nexi expects it to be
+unique in your merchant domain.
+
+Subsequent recurring charges are the second phase of Nexi recurring payments and use `POST /orders/mit`.
+They are server-to-server calls and do not redirect the customer back to the hosted page.
+
+```php
+use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateSubsequentRecurringPaymentOptions;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateSubsequentRecurringPaymentRequest;
+
+$response = $recurringPaymentService->createSubsequentRecurringPayment(
+    new CreateSubsequentRecurringPaymentRequest(
+        $correlationId,
+        $idempotencyKey,
+        $orderId,
+        1000,
+        Configuration::CURRENCY,
+        $contractId,
+        new CreateSubsequentRecurringPaymentOptions(
+            CreateSubsequentRecurringPaymentOptions::CAPTURE_TYPE_IMPLICIT,
+            $customerId,
+            'Subscription renewal',
+        ),
+    ),
+);
+
+$operation = $response->operation;
+```
+
+For subsequent payments:
+
+* `correlationId` must be a UUID v4.
+* `idempotencyKey` must be a UUID v4 and should be unique for that payment attempt. Reuse the same key
+  only when retrying the same charge after a transport failure.
+* `orderId` is the new merchant order/payment identifier for the recurring charge.
+* `contractId` is the contract created during the first hosted payment.
+* `captureType` is optional. Use `CAPTURE_TYPE_IMPLICIT` for automatic confirmation or
+  `CAPTURE_TYPE_EXPLICIT` for authorization only, if your terminal configuration allows it.
 
 ## Manual Sandbox Scripts
 
 ```shell
 php bin/create-hosted-payment-page-test.php
+php bin/create-recurring-hosted-payment-page-test.php
 php bin/retrieve-order-status-test.php <orderId> [correlationId]
 ```
 
