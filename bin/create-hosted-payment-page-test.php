@@ -5,27 +5,26 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Http\Client\Curl\Client;
+use ItaliaMultimedia\XPayWeb\Container\DependencyContainer;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
-use ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService;
+use ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory;
 use Nyholm\Psr7\Factory\Psr17Factory;
-use WebServCo\Data\Factory\Extraction\DataExtractionContainerFactory;
 
-$paymentSystemSettings = new PaymentSystemSettings(
-    '2e570a58-9914-477a-9ede-35baff23a376',
-    Configuration::ENVIRONMENT_TEST,
+$dependencyContainer = new DependencyContainer(
+    new PaymentSystemSettings(
+        '2e570a58-9914-477a-9ede-35baff23a376',
+        Configuration::ENVIRONMENT_TEST,
+    ),
 );
 
-$dataExtractionContainer = (new DataExtractionContainerFactory())->createDataExtractionContainer(true);
 $psr17Factory = new Psr17Factory();
-
-$service = new SimplePaymentService(
+$paymentServiceFactory = new PaymentServiceFactory($dependencyContainer);
+$service = $paymentServiceFactory->createSimplePaymentService(
     new Client(),
     $psr17Factory,
     $psr17Factory,
-    $paymentSystemSettings,
-    $dataExtractionContainer,
 );
 
 $orderId = sprintf('TEST%d', time());
@@ -38,7 +37,7 @@ $request = new CreateHostedPaymentPageRequest(
     'ENG',
     'https://example.com/payment/result',
     'https://example.com/payment/cancel',
-    'https://example.com/payment/notification',
+    null,
     'XPay Web Sandbox Test',
 );
 

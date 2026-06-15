@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Service;
 
+use ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory;
 use ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
@@ -13,6 +14,9 @@ final class HostedPaymentResultServiceTest extends TestCase
 {
     /**
      * @covers \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::createHostedPaymentResult
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Result\HostedPaymentResult::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::__construct
      */
     public function testCreateHostedPaymentResultReturnsResult(): void
     {
@@ -24,7 +28,11 @@ final class HostedPaymentResultServiceTest extends TestCase
     }
 
     /**
-     * @covers \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::parseHostedPaymentNotification
+     * @covers \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Notification\HostedPaymentNotification::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::__construct
      */
     public function testParseHostedPaymentNotificationReturnsNotification(): void
     {
@@ -37,6 +45,8 @@ final class HostedPaymentResultServiceTest extends TestCase
 
     /**
      * @covers \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::parseHostedPaymentNotification
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::__construct
      */
     public function testParseHostedPaymentNotificationRejectsInvalidSecurityToken(): void
     {
@@ -51,8 +61,11 @@ final class HostedPaymentResultServiceTest extends TestCase
 
     private function createService(): HostedPaymentResultService
     {
+        $dataExtractionContainer = (new DataExtractionContainerFactory())->createDataExtractionContainer(true);
+
         return new HostedPaymentResultService(
-            (new DataExtractionContainerFactory())->createDataExtractionContainer(true),
+            $dataExtractionContainer,
+            new PaymentOperationFactory($dataExtractionContainer),
         );
     }
 

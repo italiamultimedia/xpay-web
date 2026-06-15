@@ -19,15 +19,17 @@ use function sprintf;
 
 final class HostedPaymentResultService implements HostedPaymentResultServiceInterface
 {
-    public function __construct(private DataExtractionContainerInterface $dataExtractionContainer)
-    {
-    }
-
     /**
      * The resultUrl is created by the merchant and should already be tied to the local orderId.
      * Nexi may append paymentId/paymentid as redirect metadata, but payment verification
      * must be performed through GET /orders/{orderId}.
      */
+    public function __construct(
+        private DataExtractionContainerInterface $dataExtractionContainer,
+        private PaymentOperationFactory $paymentOperationFactory,
+    ) {
+    }
+
     #[Override]
     public function createHostedPaymentResult(string $orderId): HostedPaymentResult
     {
@@ -53,7 +55,7 @@ final class HostedPaymentResultService implements HostedPaymentResultServiceInte
             $nonEmptyDataExtractionService->getNonEmptyString($data, 'eventId'),
             $this->getIso8601String($data, 'eventTime'),
             $securityToken,
-            (new PaymentOperationFactory($this->dataExtractionContainer))->create($this->getArray($data, 'operation')),
+            $this->paymentOperationFactory->create($this->getArray($data, 'operation')),
             $data,
         );
     }

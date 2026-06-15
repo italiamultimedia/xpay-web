@@ -9,7 +9,6 @@ use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory;
 use Psr\Http\Message\ResponseInterface;
 use UnexpectedValueException;
-use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;
 
 use function is_array;
 use function json_decode;
@@ -20,17 +19,8 @@ abstract class AbstractPaymentService
 {
     public function __construct(
         protected PaymentSystemSettings $paymentSystemSettings,
-        protected DataExtractionContainerInterface $dataExtractionContainer,
+        private NexiApiExceptionFactory $nexiApiExceptionFactory,
     ) {
-    }
-
-    protected function getApiBaseUrl(): string
-    {
-        return match ($this->paymentSystemSettings->environment) {
-            Configuration::ENVIRONMENT_TEST => Configuration::API_URL_TEST,
-            Configuration::ENVIRONMENT_PRODUCTION => Configuration::API_URL_PRODUCTION,
-            default => throw new UnexpectedValueException('Unhandled environment.'),
-        };
     }
 
     /**
@@ -43,6 +33,15 @@ abstract class AbstractPaymentService
             'Correlation-Id' => $correlationId,
             'X-API-KEY' => $this->paymentSystemSettings->apiKey,
         ];
+    }
+
+    protected function getApiBaseUrl(): string
+    {
+        return match ($this->paymentSystemSettings->environment) {
+            Configuration::ENVIRONMENT_TEST => Configuration::API_URL_TEST,
+            Configuration::ENVIRONMENT_PRODUCTION => Configuration::API_URL_PRODUCTION,
+            default => throw new UnexpectedValueException('Unhandled environment.'),
+        };
     }
 
     /**
@@ -67,9 +66,7 @@ abstract class AbstractPaymentService
     protected function validateResponseStatusCode(ResponseInterface $response, int $expectedStatusCode): bool
     {
         if ($response->getStatusCode() !== $expectedStatusCode) {
-            $nexiApiExceptionFactory = new NexiApiExceptionFactory($this->dataExtractionContainer);
-
-            throw $nexiApiExceptionFactory->create($response);
+            throw $this->nexiApiExceptionFactory->create($response);
         }
 
         return true;

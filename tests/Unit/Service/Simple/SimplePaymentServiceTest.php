@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Service\Simple;
 
+use ItaliaMultimedia\XPayWeb\Container\DependencyContainer;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
-use ItaliaMultimedia\XPayWeb\DataTransfer\NexiError;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest;
+use ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory;
 use ItaliaMultimedia\XPayWeb\Service\Exception\NexiApiException;
 use ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Tests\Unit\TestDouble\QueueHttpClient;
-use WebServCo\Data\Factory\Extraction\DataExtractionContainerFactory;
 
 use function json_encode;
 
@@ -25,7 +25,17 @@ use const JSON_THROW_ON_ERROR;
 final class SimplePaymentServiceTest extends TestCase
 {
     /**
-     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService::createHostedPaymentPage
+     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Response\CreateHostedPaymentPageResponse::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Simple\AbstractSimplePaymentService
      */
     public function testCreateHostedPaymentPageSendsJsonRequest(): void
     {
@@ -56,7 +66,18 @@ final class SimplePaymentServiceTest extends TestCase
     }
 
     /**
-     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService::retrieveOrderStatus
+     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Response\RetrieveOrderStatusResponse::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Simple\AbstractSimplePaymentService
      */
     public function testRetrieveOrderStatusSendsGetRequestAndParsesResponse(): void
     {
@@ -88,7 +109,18 @@ final class SimplePaymentServiceTest extends TestCase
     }
 
     /**
-     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService::createHostedPaymentPage
+     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\NexiError::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Exception\NexiApiException
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Simple\AbstractSimplePaymentService
      */
     public function testCreateHostedPaymentPageThrowsNexiApiExceptionWithErrorBody(): void
     {
@@ -103,8 +135,13 @@ final class SimplePaymentServiceTest extends TestCase
         } catch (NexiApiException $nexiApiException) {
             self::assertSame(400, $nexiApiException->getStatusCode());
             self::assertSame($errorBody, $nexiApiException->getResponseBody());
-            $error = $this->getFirstNexiError($nexiApiException);
-            self::assertSame('GW0001', $error->code);
+            $errors = $nexiApiException->getErrors();
+            self::assertArrayHasKey(0, $errors);
+            if (!isset($errors[0])) {
+                self::fail('Expected Nexi error.');
+            }
+
+            self::assertSame('GW0001', $errors[0]->code);
             self::assertStringContainsString('GW0001 Invalid merchant URL', $nexiApiException->getMessage());
         }
     }
@@ -127,25 +164,15 @@ final class SimplePaymentServiceTest extends TestCase
     private function createService(QueueHttpClient $httpClient): SimplePaymentService
     {
         $psr17Factory = new Psr17Factory();
+        $dependencyContainer = new DependencyContainer(
+            new PaymentSystemSettings('api-key', Configuration::ENVIRONMENT_TEST),
+        );
 
-        return new SimplePaymentService(
+        return (new PaymentServiceFactory($dependencyContainer))->createSimplePaymentService(
             $httpClient,
             $psr17Factory,
             $psr17Factory,
-            new PaymentSystemSettings('api-key', Configuration::ENVIRONMENT_TEST),
-            (new DataExtractionContainerFactory())->createDataExtractionContainer(true),
         );
-    }
-
-    private function getFirstNexiError(NexiApiException $nexiApiException): NexiError
-    {
-        $errors = $nexiApiException->getErrors();
-        $error = $errors[0] ?? null;
-        if ($error instanceof NexiError) {
-            return $error;
-        }
-
-        self::fail('Expected Nexi error.');
     }
 
     /**

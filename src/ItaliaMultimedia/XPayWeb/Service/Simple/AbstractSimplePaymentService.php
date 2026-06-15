@@ -6,12 +6,15 @@ namespace ItaliaMultimedia\XPayWeb\Service\Simple;
 
 use ItaliaMultimedia\XPayWeb\Contract\Simple\SimplePaymentServiceInterface;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
+use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Response\CreateHostedPaymentPageResponse;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Response\RetrieveOrderStatusResponse;
+use ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory;
 use ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory;
 use ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService;
 use Override;
 use UnexpectedValueException;
+use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;
 
 use function is_array;
 use function rawurlencode;
@@ -19,6 +22,15 @@ use function sprintf;
 
 abstract class AbstractSimplePaymentService extends AbstractPaymentService implements SimplePaymentServiceInterface
 {
+    public function __construct(
+        PaymentSystemSettings $paymentSystemSettings,
+        NexiApiExceptionFactory $nexiApiExceptionFactory,
+        protected DataExtractionContainerInterface $dataExtractionContainer,
+        private PaymentOperationFactory $paymentOperationFactory,
+    ) {
+        parent::__construct($paymentSystemSettings, $nexiApiExceptionFactory);
+    }
+
     #[Override]
     public function getHostedPaymentPageApiUrl(): string
     {
@@ -85,14 +97,13 @@ abstract class AbstractSimplePaymentService extends AbstractPaymentService imple
      */
     private function createPaymentOperations(array $operations): array
     {
-        $paymentOperationFactory = new PaymentOperationFactory($this->dataExtractionContainer);
         $paymentOperations = [];
         foreach ($operations as $operation) {
             if (!is_array($operation)) {
                 throw new UnexpectedValueException('Invalid "operations" data.');
             }
 
-            $paymentOperations[] = $paymentOperationFactory->create($operation);
+            $paymentOperations[] = $this->paymentOperationFactory->create($operation);
         }
 
         return $paymentOperations;
@@ -107,15 +118,10 @@ abstract class AbstractSimplePaymentService extends AbstractPaymentService imple
     private function getArray(array $data, string $key): array
     {
         $arrayStorageService = $this->dataExtractionContainer->getArrayStorageService();
-        if ($arrayStorageService !== null) {
-            return $arrayStorageService->getArray($data, $arrayStorageService->parseKey($key));
+        if ($arrayStorageService === null) {
+            throw new UnexpectedValueException('Array storage service is not available.');
         }
 
-        $value = $data[$key] ?? [];
-        if (!is_array($value)) {
-            return [];
-        }
-
-        return $value;
+        return $arrayStorageService->getArray($data, $arrayStorageService->parseKey($key));
     }
 }

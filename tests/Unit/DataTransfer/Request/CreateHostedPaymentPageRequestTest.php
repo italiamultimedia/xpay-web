@@ -11,6 +11,7 @@ final class CreateHostedPaymentPageRequestTest extends TestCase
 {
     /**
      * @covers \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest::toArray
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest::__construct
      */
     public function testToArrayReturnsRequiredHostedPaymentPagePayload(): void
     {
@@ -29,6 +30,7 @@ final class CreateHostedPaymentPageRequestTest extends TestCase
 
     /**
      * @covers \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest::toArray
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest::__construct
      */
     public function testToArrayReturnsOptionalHostedPaymentPagePayload(): void
     {

@@ -12,6 +12,7 @@ final class RetrieveOrderStatusResponseTest extends TestCase
 {
     /**
      * @covers \ItaliaMultimedia\XPayWeb\DataTransfer\Response\RetrieveOrderStatusResponse::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation::__construct
      */
     public function testConstructorStoresOrderStatusData(): void
     {

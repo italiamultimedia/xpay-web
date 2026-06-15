@@ -1,39 +1,111 @@
 # italiamultimedia/xpay-web
 
-An XPay Web / Nexi implementation for API Key based integrations.
+PHP library for Nexi XPay Web / Phoenix API-key integrations.
 
-This package is intended for contracts using XPay Web / Phoenix APIs, not the legacy Alias + MAC XPay integration.
+This package targets the API-key based XPay Web endpoints, not the legacy Alias + MAC integration.
 
-Currently implemented functionality:
+Implemented functionality:
 
 * Hosted Payment Page creation: `POST /orders/hpp`
 * Order status retrieval: `GET /orders/{orderId}`
 * Hosted payment result handling
 * Hosted payment notification parsing
 * Nexi API error parsing
-* Localized customer error messages: English and Italian
+* Customer-facing Nexi error messages in English and Italian
 
----
+## Installation
 
-## Hosted Payment Page
+```shell
+composer require italiamultimedia/xpay-web
+```
 
-### Create payment page
+The simple payment service needs:
 
-Use `SimplePaymentService` to create a Hosted Payment Page.
+* a PSR-18 HTTP client
+* PSR-17 request and stream factories
+
+For a plain PHP project, one simple combination is:
+
+```shell
+composer require php-http/curl-client nyholm/psr7
+```
+
+Frameworks may already provide these services; in that case, pass your framework's PSR implementations instead.
+
+## Configuration
+
+You need two values from your application configuration:
+
+* your Nexi API key
+* the Nexi environment: `test` or `production`
+
+The environment matters because it decides which Nexi API base URL is used:
+
+* `Configuration::ENVIRONMENT_TEST` uses the Nexi sandbox API
+* `Configuration::ENVIRONMENT_PRODUCTION` uses the live Nexi API
+
+Use the sandbox environment with a sandbox API key. Use the production environment only with a production API key.
+
+Example `.env` values:
+
+```dotenv
+XPAY_API_KEY=your-api-key
+XPAY_ENVIRONMENT=test
+```
+
+This package does not read `.env` files directly. Read those values with your framework/configuration layer, then pass them into `PaymentSystemSettings`.
+
+Plain PHP example:
 
 ```php
-$paymentSystemSettings = new PaymentSystemSettings(
-    $apiKey,
-    Configuration::ENVIRONMENT_TEST,
+use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
+use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
+
+$apiKey = (string) getenv('XPAY_API_KEY');
+$environment = (string) (getenv('XPAY_ENVIRONMENT') ?: Configuration::ENVIRONMENT_TEST);
+
+$paymentSystemSettings = new PaymentSystemSettings($apiKey, $environment);
+```
+
+You can also pass the strings directly:
+
+```php
+$paymentSystemSettings = new PaymentSystemSettings($apiKey, 'test');
+```
+
+Using `Configuration::ENVIRONMENT_TEST` and `Configuration::ENVIRONMENT_PRODUCTION` is preferred because it avoids typos.
+
+## Create Services
+
+Create one `DependencyContainer` with your payment settings, then use `PaymentServiceFactory` to build services.
+
+```php
+use Http\Client\Curl\Client;
+use ItaliaMultimedia\XPayWeb\Container\DependencyContainer;
+use ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory;
+use Nyholm\Psr7\Factory\Psr17Factory;
+
+$dependencyContainer = new DependencyContainer($paymentSystemSettings);
+$paymentServiceFactory = new PaymentServiceFactory($dependencyContainer);
+
+$psr17Factory = new Psr17Factory();
+
+$simplePaymentService = $paymentServiceFactory->createSimplePaymentService(
+    new Client(),
+    $psr17Factory,
+    $psr17Factory,
 );
 
-$service = new SimplePaymentService(
-    $httpClient,
-    $requestFactory,
-    $streamFactory,
-    $paymentSystemSettings,
-    $dataExtractionContainer,
-);
+$hostedPaymentResultService = $paymentServiceFactory->createHostedPaymentResultService();
+```
+
+## Create A Hosted Payment Page
+
+Create an order in your application first, then send Nexi the hosted payment page request.
+
+```php
+use ItaliaMultimedia\XPayWeb\DataTransfer\Configuration;
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
 
 $request = new CreateHostedPaymentPageRequest(
     $correlationId,
@@ -41,63 +113,73 @@ $request = new CreateHostedPaymentPageRequest(
     1000,
     Configuration::CURRENCY,
     'ITA',
-    'https://example.com/payment/result?lang=it',
-    'https://example.com/payment/cancel?lang=it',
-    'https://example.com/payment/notification?lang=it',
+    'https://example.com/payment/result',
+    'https://example.com/payment/cancel',
+    null,
     'Order description',
 );
 
-$response = $service->createHostedPaymentPage($request);
+$response = $simplePaymentService->createHostedPaymentPage($request);
+
+// Store this with your local order if you use hosted payment notifications.
+$securityToken = $response->securityToken;
 
 header(sprintf('Location: %s', $response->hostedPage));
 exit;
 ```
 
-`correlationId` must be a UUID v4.
+Notes:
 
-`orderId` must be a Nexi-safe order identifier. Avoid UUIDs with hyphens for `orderId`.
+* `correlationId` must be a UUID v4.
+* `orderId` should be your local payment/order identifier.
+* Amounts are expressed in minor units, so `1000` means EUR 10.00 when using `Configuration::CURRENCY`.
+* `resultUrl` is where Nexi redirects the customer after payment.
+* `cancelUrl` is where Nexi redirects the customer after cancellation.
+* `notificationUrl` is optional. Pass `null` unless you have a real public HTTPS webhook listener.
 
-Amount is expressed in minor units:
-
-```text
-1000 = €10.00
-```
-
----
-
-## Retrieve order status
-
-After the customer returns from Nexi, verify the payment using `GET /orders/{orderId}`.
+If you do have a webhook listener:
 
 ```php
-$response = $service->retrieveOrderStatus(
+$request = new CreateHostedPaymentPageRequest(
+    $correlationId,
+    $orderId,
+    1000,
+    Configuration::CURRENCY,
+    'ITA',
+    'https://example.com/payment/result',
+    'https://example.com/payment/cancel',
+    'https://example.com/payment/notification',
+    'Order description',
+);
+```
+
+## Verify Payment Status
+
+After the customer returns to your `resultUrl`, do not trust only the redirect parameters. Verify the order through Nexi:
+
+```php
+use ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest;
+
+$response = $simplePaymentService->retrieveOrderStatus(
     new RetrieveOrderStatusRequest($correlationId, $orderId),
 );
 
 foreach ($response->operations as $operation) {
-    // Inspect operationResult, operationType, operationId, etc.
+    // Inspect operationResult, operationType, operationId, operationTime, etc.
 }
 ```
 
-The result redirect may contain `paymentId` / `paymentid`, but payment verification should be done through order status retrieval.
+The result redirect may include `paymentId`, but this library treats your local `orderId` as the source of truth.
 
----
+## Hosted Result And Notifications
 
-## Hosted payment result
-
-The result URL should be created by the merchant and tied to the local order.
+The result URL should already be tied to the local order.
 
 ```php
-$result = $hostedPaymentResultService->createHostedPaymentResult($orderId, $paymentId);
+$result = $hostedPaymentResultService->createHostedPaymentResult($orderId);
 ```
 
-The `paymentId` is optional redirect metadata. The local `orderId` remains the source of truth for status retrieval.
-
----
-
-## Notifications
-
-Use `HostedPaymentResultService` to parse hosted payment notifications.
+For server-to-server notifications, Nexi posts JSON to your `notificationUrl`. Parse that received payload and validate it with the security token you stored when creating the hosted payment page:
 
 ```php
 $notification = $hostedPaymentResultService->parseHostedPaymentNotification(
@@ -106,68 +188,47 @@ $notification = $hostedPaymentResultService->parseHostedPaymentNotification(
 );
 ```
 
-The notification security token is validated with `hash_equals`.
+For notification-only parsing, `new DependencyContainer()` is enough because payment settings are not needed.
 
----
-
-## Error handling
+## Error Handling
 
 API errors are thrown as `NexiApiException`.
 
 ```php
+use ItaliaMultimedia\XPayWeb\Service\Error\NexiErrorMessageService;
+use ItaliaMultimedia\XPayWeb\Service\Exception\NexiApiException;
+
 try {
-    $response = $service->createHostedPaymentPage($request);
+    $response = $simplePaymentService->createHostedPaymentPage($request);
 } catch (NexiApiException $exception) {
     $technicalMessage = $exception->getMessage();
-    $errors = $exception->getErrors();
+    $customerMessage = (new NexiErrorMessageService())->getCustomerMessage($exception, 'it');
 }
 ```
 
-Each parsed Nexi error contains:
+Supported customer message language codes are `en` and `it`. Unknown languages fall back to English.
 
-```php
-$error->code;
-$error->description;
-```
+## Recurring Payments
 
-For customer-facing messages, use `NexiErrorMessageService`.
+Recurring payments are not implemented yet.
 
-```php
-$message = $nexiErrorMessageService->getCustomerMessage($exception, 'it');
-```
+Expected next work:
 
-Supported customer message languages:
+* Add request and response data transfers for recurring initial and subsequent payments.
+* Add service methods and factories for the Nexi recurring-payment endpoints.
+* Define how the merchant application stores recurring payment identifiers/tokens.
+* Add sandbox scripts and unit tests for initial authorization and subsequent charges.
 
-* `en`
-* `it`
-
-Unknown languages fall back to English.
-
----
-
-## Manual sandbox scripts
-
-Create Hosted Payment Page:
+## Manual Sandbox Scripts
 
 ```shell
 php bin/create-hosted-payment-page-test.php
+php bin/retrieve-order-status-test.php <orderId> [correlationId]
 ```
 
-Retrieve order status:
-
-```shell
-php bin/retrieve-order-status-test.php <orderId>
-```
-
-Parse hosted payment notification:
-
-```shell
-php bin/parse-hosted-payment-notification-test.php <securityToken> [notificationJsonFile]
-```
-
-These scripts are for manual sandbox testing only.
-
----
+The sandbox scripts do not test server-to-server notifications. To test notification parsing, point
+`notificationUrl` at a real listener in your application and pass the received payload to
+`HostedPaymentResultService::parseHostedPaymentNotification()`.
 
 ## Development
 
@@ -178,16 +239,6 @@ composer check:phpstan
 composer check:phan
 composer check:phpmd
 composer check:psalm
-```
-
-Or run all checks:
-
-```shell
 composer check
-```
-
-Run tests:
-
-```shell
 composer test
 ```

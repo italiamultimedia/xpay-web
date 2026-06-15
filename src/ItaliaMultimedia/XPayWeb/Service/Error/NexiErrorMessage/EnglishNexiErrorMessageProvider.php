@@ -11,7 +11,8 @@ final class EnglishNexiErrorMessageProvider
     public function getCustomerMessage(?NexiErrorCode $errorCode): string
     {
         return match ($errorCode) {
-            NexiErrorCode::DUPLICATE_ORDER => 'This payment request already exists. Please refresh and try again.',
+            NexiErrorCode::DUPLICATE_ORDER => 'This payment request already exists. '
+                . 'Please reload the page and try again.',
             NexiErrorCode::ORDER_NOT_FOUND,
             NexiErrorCode::ORDER_OPERATION_NOT_FOUND,
             NexiErrorCode::TRANSACTION_NOT_FOUND => 'The payment could not be found. Please contact support.',
@@ -21,8 +22,8 @@ final class EnglishNexiErrorMessageProvider
             NexiErrorCode::INTERNAL_ERROR,
             NexiErrorCode::PAYMENT_INTERNAL_ERROR,
             NexiErrorCode::PAYMENT_SETUP_INTERNAL_ERROR,
-            NexiErrorCode::PAYMENT_VALIDATION_INTERNAL_ERROR => 'The payment service had a temporary problem. '
-                . 'Please try again.',
+            NexiErrorCode::PAYMENT_VALIDATION_INTERNAL_ERROR => 'A temporary problem occurred while '
+                . 'processing your payment. Please try again.',
             default => 'The payment could not be completed. Please try again or contact support.',
         };
     }

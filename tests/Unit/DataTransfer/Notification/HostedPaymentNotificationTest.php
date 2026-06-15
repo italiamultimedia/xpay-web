@@ -12,6 +12,7 @@ final class HostedPaymentNotificationTest extends TestCase
 {
     /**
      * @covers \ItaliaMultimedia\XPayWeb\DataTransfer\Notification\HostedPaymentNotification::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation::__construct
      */
     public function testConstructorStoresNotificationData(): void
     {

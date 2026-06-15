@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace ItaliaMultimedia\XPayWeb\Service\Simple;
 
 use Fig\Http\Message\RequestMethodInterface;
+use ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer;
 use ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Response\CreateHostedPaymentPageResponse;
 use ItaliaMultimedia\XPayWeb\DataTransfer\Response\RetrieveOrderStatusResponse;
+use ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory;
+use ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory;
 use Override;
-use Psr\Http\Client\ClientInterface;
-use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\StreamFactoryInterface;
 use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;
 
 use function json_encode;
@@ -28,13 +28,18 @@ final class SimplePaymentService extends AbstractSimplePaymentService
     private ?ResponseInterface $response = null;
 
     public function __construct(
-        private ClientInterface $httpClient,
-        private RequestFactoryInterface $requestFactory,
-        private StreamFactoryInterface $streamFactory,
+        private HttpDependencyContainer $httpDependencyContainer,
         PaymentSystemSettings $paymentSystemSettings,
+        NexiApiExceptionFactory $nexiApiExceptionFactory,
         DataExtractionContainerInterface $dataExtractionContainer,
+        PaymentOperationFactory $paymentOperationFactory,
     ) {
-        parent::__construct($paymentSystemSettings, $dataExtractionContainer);
+        parent::__construct(
+            $paymentSystemSettings,
+            $nexiApiExceptionFactory,
+            $dataExtractionContainer,
+            $paymentOperationFactory,
+        );
     }
 
     #[Override]
@@ -43,7 +48,7 @@ final class SimplePaymentService extends AbstractSimplePaymentService
     ): CreateHostedPaymentPageResponse {
         $request = $this->createHostedPaymentPageRequest($createHostedPaymentPageRequest);
 
-        $this->response = $this->httpClient->sendRequest($request);
+        $this->response = $this->httpDependencyContainer->httpClient->sendRequest($request);
 
         $this->validateResponseStatusCode($this->response, 200);
 
@@ -63,7 +68,7 @@ final class SimplePaymentService extends AbstractSimplePaymentService
     ): RetrieveOrderStatusResponse {
         $request = $this->createRetrieveOrderStatusRequest($retrieveOrderStatusRequest);
 
-        $this->response = $this->httpClient->sendRequest($request);
+        $this->response = $this->httpDependencyContainer->httpClient->sendRequest($request);
 
         $this->validateResponseStatusCode($this->response, 200);
 
@@ -77,12 +82,12 @@ final class SimplePaymentService extends AbstractSimplePaymentService
     ): RequestInterface {
         $requestBody = json_encode($createHostedPaymentPageRequest->toArray(), JSON_THROW_ON_ERROR);
 
-        $request = $this->requestFactory->createRequest(
+        $request = $this->httpDependencyContainer->requestFactory->createRequest(
             RequestMethodInterface::METHOD_POST,
             $this->getHostedPaymentPageApiUrl(),
         );
 
-        $request = $request->withBody($this->streamFactory->createStream($requestBody));
+        $request = $request->withBody($this->httpDependencyContainer->streamFactory->createStream($requestBody));
 
         $correlationId = $createHostedPaymentPageRequest->correlationId;
 
@@ -101,7 +106,7 @@ final class SimplePaymentService extends AbstractSimplePaymentService
     private function createRetrieveOrderStatusRequest(
         RetrieveOrderStatusRequest $retrieveOrderStatusRequest,
     ): RequestInterface {
-        $request = $this->requestFactory->createRequest(
+        $request = $this->httpDependencyContainer->requestFactory->createRequest(
             RequestMethodInterface::METHOD_GET,
             $this->getOrderApiUrl($retrieveOrderStatusRequest->orderId),
         );
