@@ -60,7 +60,7 @@ try {
             $operation->operationType,
             $operation->operationResult,
             $operation->operationId,
-            $operation->operationTime,
+            $operation->operationTime ?? '',
             PHP_EOL,
         );
     }

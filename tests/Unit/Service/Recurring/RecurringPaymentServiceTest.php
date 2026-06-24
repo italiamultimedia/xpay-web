@@ -57,6 +57,39 @@ final class RecurringPaymentServiceTest extends TestCase
         );
     }
 
+    /**
+     * @covers \ItaliaMultimedia\XPayWeb\Service\Recurring\RecurringPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateSubsequentRecurringPaymentOptions
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateSubsequentRecurringPaymentRequest
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Response\CreateSubsequentRecurringPaymentResponse
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Recurring\AbstractRecurringPaymentService
+     */
+    public function testCreateSubsequentRecurringPaymentDoesNotRequireOperationTime(): void
+    {
+        $payload = $this->getOperationPayload();
+        $operation = $payload['operation'] ?? null;
+        self::assertIsArray($operation);
+        unset($operation['operationTime']);
+        $payload['operation'] = $operation;
+        $httpClient = new QueueHttpClient(
+            new Response(200, [], json_encode($payload, JSON_THROW_ON_ERROR)),
+        );
+        $service = $this->createService($httpClient);
+
+        $response = $service->createSubsequentRecurringPayment($this->createSubsequentRecurringPaymentRequest());
+
+        self::assertNull($response->operation->operationTime);
+        self::assertSame('ORDER-124', $response->operation->orderId);
+    }
+
     private function assertSentRequest(
         RequestInterface $sentRequest,
         CreateSubsequentRecurringPaymentRequest $request,

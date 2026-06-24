@@ -112,6 +112,50 @@ final class SimplePaymentServiceTest extends TestCase
      * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService
      * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
      * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\RetrieveOrderStatusRequest::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Response\RetrieveOrderStatusResponse::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\NexiApiExceptionFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\Service\PaymentServiceFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\AbstractPaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Service\Simple\AbstractSimplePaymentService
+     */
+    public function testRetrieveOrderStatusDoesNotRequireOperationTime(): void
+    {
+        $payload = $this->getOrderPayload();
+        $orderStatus = $payload['orderStatus'] ?? null;
+        self::assertIsArray($orderStatus);
+        $operations = $orderStatus['operations'] ?? null;
+        self::assertIsArray($operations);
+        $operation = $operations[0] ?? null;
+        self::assertIsArray($operation);
+        unset($operation['operationTime']);
+        $operations[0] = $operation;
+        $orderStatus['operations'] = $operations;
+        $payload['orderStatus'] = $orderStatus;
+        $httpClient = new QueueHttpClient(
+            new Response(200, [], json_encode($payload, JSON_THROW_ON_ERROR)),
+        );
+        $service = $this->createService($httpClient);
+
+        $response = $service->retrieveOrderStatus(
+            new RetrieveOrderStatusRequest('2f0ea505-9b41-414a-b374-4fe672327d85', 'ORDER-123'),
+        );
+        $operation = $response->operations[0] ?? null;
+        if (!$operation instanceof PaymentOperation) {
+            self::fail('Expected payment operation.');
+        }
+
+        self::assertNull($operation->operationTime);
+        self::assertSame('AUTHORIZED', $operation->operationResult);
+    }
+
+    /**
+     * @covers \ItaliaMultimedia\XPayWeb\Service\Simple\SimplePaymentService
+     * @uses \ItaliaMultimedia\XPayWeb\Container\DependencyContainer
+     * @uses \ItaliaMultimedia\XPayWeb\Container\HttpDependencyContainer
      * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\NexiError::__construct
      * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentSystemSettings
      * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Request\CreateHostedPaymentPageRequest

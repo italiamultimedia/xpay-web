@@ -30,7 +30,7 @@ final class PaymentOperationFactory
             $nonEmptyDataExtractionService->getNonEmptyString($data, 'operationId'),
             $nonEmptyDataExtractionService->getNonEmptyString($data, 'operationType'),
             $nonEmptyDataExtractionService->getNonEmptyString($data, 'operationResult'),
-            $nonEmptyDataExtractionService->getNonEmptyString($data, 'operationTime'),
+            $dataExtractionService->getNullableString($data, 'operationTime'),
             $dataExtractionService->getNullableString($data, 'operationAmount'),
             $dataExtractionService->getNullableString($data, 'operationCurrency'),
             $this->getArray($data, 'additionalData'),

@@ -44,6 +44,29 @@ final class HostedPaymentResultServiceTest extends TestCase
     }
 
     /**
+     * @covers \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\Notification\HostedPaymentNotification::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\DataTransfer\PaymentOperation::__construct
+     * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory
+     * @uses \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::__construct
+     */
+    public function testParseHostedPaymentNotificationDoesNotRequireDateFields(): void
+    {
+        $payload = $this->getPayload();
+        $operation = $payload['operation'] ?? null;
+        self::assertIsArray($operation);
+        unset($payload['eventTime'], $operation['operationTime']);
+        $payload['operation'] = $operation;
+        $service = $this->createService();
+
+        $notification = $service->parseHostedPaymentNotification($payload, 'security-token');
+
+        self::assertNull($notification->eventTime);
+        self::assertNull($notification->operation->operationTime);
+        self::assertSame('ORDER-123', $notification->operation->orderId);
+    }
+
+    /**
      * @covers \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::parseHostedPaymentNotification
      * @uses \ItaliaMultimedia\XPayWeb\Factory\PaymentOperationFactory::__construct
      * @uses \ItaliaMultimedia\XPayWeb\Service\HostedPaymentResultService::__construct

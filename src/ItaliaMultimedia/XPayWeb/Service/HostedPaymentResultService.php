@@ -14,8 +14,6 @@ use WebServCo\Data\Contract\Extraction\DataExtractionContainerInterface;
 
 use function hash_equals;
 use function is_array;
-use function preg_match;
-use function sprintf;
 
 final class HostedPaymentResultService implements HostedPaymentResultServiceInterface
 {
@@ -45,6 +43,7 @@ final class HostedPaymentResultService implements HostedPaymentResultServiceInte
         array $data,
         string $expectedSecurityToken,
     ): HostedPaymentNotification {
+        $dataExtractionService = $this->dataExtractionContainer->getLooseArrayDataExtractionService();
         $nonEmptyDataExtractionService = $this->dataExtractionContainer->getLooseArrayNonEmptyDataExtractionService();
         $securityToken = $nonEmptyDataExtractionService->getNonEmptyString($data, 'securityToken');
         if (!hash_equals($expectedSecurityToken, $securityToken)) {
@@ -53,27 +52,11 @@ final class HostedPaymentResultService implements HostedPaymentResultServiceInte
 
         return new HostedPaymentNotification(
             $nonEmptyDataExtractionService->getNonEmptyString($data, 'eventId'),
-            $this->getIso8601String($data, 'eventTime'),
+            $dataExtractionService->getNullableString($data, 'eventTime'),
             $securityToken,
             $this->paymentOperationFactory->create($this->getArray($data, 'operation')),
             $data,
         );
-    }
-
-    /**
-     * @phpcs:ignore SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint
-     * @param array<mixed> $data
-     */
-    private function getIso8601String(array $data, string $key): string
-    {
-        $value = $this->dataExtractionContainer->getLooseArrayNonEmptyDataExtractionService()
-            ->getNonEmptyString($data, $key);
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/', $value) !== 1) {
-            throw new UnexpectedValueException(sprintf('Invalid "%s" ISO 8601 data.', $key));
-        }
-
-        return $value;
     }
 
     /**

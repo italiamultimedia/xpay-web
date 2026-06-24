@@ -19,7 +19,7 @@ final class PaymentOperation implements DataTransferInterface
         public readonly string $operationId,
         public readonly string $operationType,
         public readonly string $operationResult,
-        public readonly string $operationTime,
+        public readonly ?string $operationTime = null,
         public readonly ?string $operationAmount = null,
         public readonly ?string $operationCurrency = null,
         public readonly array $additionalData = [],

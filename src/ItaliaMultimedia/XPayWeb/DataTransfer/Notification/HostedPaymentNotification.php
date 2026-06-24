@@ -15,7 +15,7 @@ final class HostedPaymentNotification implements DataTransferInterface
      */
     public function __construct(
         public readonly string $eventId,
-        public readonly string $eventTime,
+        public readonly ?string $eventTime,
         public readonly string $securityToken,
         public readonly PaymentOperation $operation,
         public readonly array $rawData = [],
