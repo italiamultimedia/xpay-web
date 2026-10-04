@@ -9,9 +9,9 @@ use WebServCo\Data\Contract\Transfer\DataTransferInterface;
 
 use function in_array;
 
-final class PaymentSystemSettings implements DataTransferInterface
+final readonly class PaymentSystemSettings implements DataTransferInterface
 {
-    public function __construct(public readonly string $apiKey, public readonly string $environment,)
+    public function __construct(public string $apiKey, public string $environment,)
     {
         $this->validateEnvironment($this->environment);
     }

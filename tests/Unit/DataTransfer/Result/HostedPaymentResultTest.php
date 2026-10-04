@@ -26,7 +26,7 @@ final class HostedPaymentResultTest extends TestCase
     public function testConstructorRejectsEmptyOrderId(): void
     {
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('Missing or invalid "orderId" data.');
+        $this->expectExceptionMessageIs('Missing or invalid "orderId" data.');
 
         $result = new HostedPaymentResult('');
         self::fail($result::class . ' should not have been created.');

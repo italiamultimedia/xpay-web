@@ -6,9 +6,9 @@ namespace ItaliaMultimedia\XPayWeb\DataTransfer\Response;
 
 use WebServCo\Data\Contract\Transfer\DataTransferInterface;
 
-final class CreateHostedPaymentPageResponse implements DataTransferInterface
+final readonly class CreateHostedPaymentPageResponse implements DataTransferInterface
 {
-    public function __construct(public readonly string $hostedPage, public readonly string $securityToken,)
+    public function __construct(public string $hostedPage, public string $securityToken,)
     {
     }
 }

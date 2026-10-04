@@ -6,17 +6,17 @@ namespace ItaliaMultimedia\XPayWeb\DataTransfer\Request;
 
 use WebServCo\Data\Contract\Transfer\DataTransferInterface;
 
-final class CreateHostedPaymentPageRequest implements DataTransferInterface
+final readonly class CreateHostedPaymentPageRequest implements DataTransferInterface
 {
     public function __construct(
-        public readonly string $correlationId,
-        public readonly string $orderId,
-        public readonly int $amount,
-        public readonly string $currency,
-        public readonly string $language,
-        public readonly string $resultUrl,
-        public readonly string $cancelUrl,
-        public readonly ?CreateHostedPaymentPageOptions $options = null,
+        public string $correlationId,
+        public string $orderId,
+        public int $amount,
+        public string $currency,
+        public string $language,
+        public string $resultUrl,
+        public string $cancelUrl,
+        public ?CreateHostedPaymentPageOptions $options = null,
     ) {
     }
 

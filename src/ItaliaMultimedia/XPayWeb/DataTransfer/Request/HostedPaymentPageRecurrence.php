@@ -6,7 +6,7 @@ namespace ItaliaMultimedia\XPayWeb\DataTransfer\Request;
 
 use WebServCo\Data\Contract\Transfer\DataTransferInterface;
 
-final class HostedPaymentPageRecurrence implements DataTransferInterface
+final readonly class HostedPaymentPageRecurrence implements DataTransferInterface
 {
     public const string ACTION_CONTRACT_CREATION = 'CONTRACT_CREATION';
 
@@ -15,11 +15,11 @@ final class HostedPaymentPageRecurrence implements DataTransferInterface
     public const string CONTRACT_TYPE_MIT_UNSCHEDULED = 'MIT_UNSCHEDULED';
 
     public function __construct(
-        public readonly string $contractId,
-        public readonly string $contractType,
-        public readonly ?string $contractExpiryDate = null,
-        public readonly ?string $contractFrequency = null,
-        public readonly string $action = self::ACTION_CONTRACT_CREATION,
+        public string $contractId,
+        public string $contractType,
+        public ?string $contractExpiryDate = null,
+        public ?string $contractFrequency = null,
+        public string $action = self::ACTION_CONTRACT_CREATION,
     ) {
     }
 

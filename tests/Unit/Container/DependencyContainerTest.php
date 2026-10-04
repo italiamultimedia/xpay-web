@@ -32,7 +32,7 @@ final class DependencyContainerTest extends TestCase
     public function testGetPaymentSystemSettingsRequiresConfiguredSettings(): void
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('Payment system settings are not configured.');
+        $this->expectExceptionMessageIs('Payment system settings are not configured.');
 
         (new DependencyContainer())->getPaymentSystemSettings();
     }

@@ -8,12 +8,12 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 
-final class HttpDependencyContainer
+final readonly class HttpDependencyContainer
 {
     public function __construct(
-        public readonly ClientInterface $httpClient,
-        public readonly RequestFactoryInterface $requestFactory,
-        public readonly StreamFactoryInterface $streamFactory,
+        public ClientInterface $httpClient,
+        public RequestFactoryInterface $requestFactory,
+        public StreamFactoryInterface $streamFactory,
     ) {
     }
 }

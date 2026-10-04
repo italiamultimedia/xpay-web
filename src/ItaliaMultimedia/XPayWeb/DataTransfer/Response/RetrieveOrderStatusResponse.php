@@ -6,7 +6,7 @@ namespace ItaliaMultimedia\XPayWeb\DataTransfer\Response;
 
 use WebServCo\Data\Contract\Transfer\DataTransferInterface;
 
-final class RetrieveOrderStatusResponse implements DataTransferInterface
+final readonly class RetrieveOrderStatusResponse implements DataTransferInterface
 {
     /**
      * @phpcs:disable SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint.DisallowedMixedTypeHint
@@ -15,15 +15,15 @@ final class RetrieveOrderStatusResponse implements DataTransferInterface
      * @phpcs:enable
      */
     public function __construct(
-        public readonly string $orderId,
-        public readonly string $orderAmount,
-        public readonly string $orderCurrency,
-        public readonly ?string $authorizedAmount = null,
-        public readonly ?string $capturedAmount = null,
-        public readonly ?string $lastOperationType = null,
-        public readonly ?string $lastOperationTime = null,
-        public readonly array $operations = [],
-        public readonly array $rawData = [],
+        public string $orderId,
+        public string $orderAmount,
+        public string $orderCurrency,
+        public ?string $authorizedAmount = null,
+        public ?string $capturedAmount = null,
+        public ?string $lastOperationType = null,
+        public ?string $lastOperationTime = null,
+        public array $operations = [],
+        public array $rawData = [],
     ) {
     }
 }

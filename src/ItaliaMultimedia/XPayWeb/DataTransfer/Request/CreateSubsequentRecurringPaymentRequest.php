@@ -6,16 +6,16 @@ namespace ItaliaMultimedia\XPayWeb\DataTransfer\Request;
 
 use WebServCo\Data\Contract\Transfer\DataTransferInterface;
 
-final class CreateSubsequentRecurringPaymentRequest implements DataTransferInterface
+final readonly class CreateSubsequentRecurringPaymentRequest implements DataTransferInterface
 {
     public function __construct(
-        public readonly string $correlationId,
-        public readonly string $idempotencyKey,
-        public readonly string $orderId,
-        public readonly int $amount,
-        public readonly string $currency,
-        public readonly string $contractId,
-        public readonly ?CreateSubsequentRecurringPaymentOptions $options = null,
+        public string $correlationId,
+        public string $idempotencyKey,
+        public string $orderId,
+        public int $amount,
+        public string $currency,
+        public string $contractId,
+        public ?CreateSubsequentRecurringPaymentOptions $options = null,
     ) {
     }
 

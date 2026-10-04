@@ -74,7 +74,7 @@ final class HostedPaymentResultServiceTest extends TestCase
     public function testParseHostedPaymentNotificationRejectsInvalidSecurityToken(): void
     {
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('Invalid hosted payment notification security token.');
+        $this->expectExceptionMessageIs('Invalid hosted payment notification security token.');
 
         $service = $this->createService();
 
